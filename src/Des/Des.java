@@ -2,36 +2,30 @@ package Des;
 
 import java.util.Arrays;
 
-//import java.util.Arrays;
 
 public class Des {
 
+	byte[] message;	  			//input message into byte[] type
+	byte[] cipher;    			//plaintext after encrypt
+	
+	byte[] message_block;		//64bit text block
+	byte[] key;					//64 bit key 		 
+
+	byte offset;    			//not work yet  , so cipher text will be multiples of 8
+	
+	static byte[][] roundKey;	
+	int roundKeyStarter;		 //encrypt: 0  decrypt:15
+	int roundKeyOrder;			//encrypt: 1  decrypt:-1
+
 
 	
 	
-	byte[] message;	  //String into byte[] type
 	
-	byte[] message_block;        //64bit text block
-	byte[] key;//64 bit key ,default key		 		 
-	//byte[] ciphertext;       //64bit block
-	byte offset;
 
-	byte[] cipher;
-
-	
-	
-	
-	//key new byte[] {(byte)0x13,(byte)0x34 ,(byte)0x57 ,(byte)0x79 ,(byte)0x9B, (byte)0xBC, (byte)0xDF, (byte)0xF1}
-	//new byte[]{(byte)1, (byte) 162, (byte) 179, (byte)196,(byte) 213, (byte)230, (byte)7, (byte)248};
-	
-	static byte[][] roundKey;
-
-	int roundKeyStarter; //encrypt: 0  decrypt:15
-	int roundKeyOrder;	//encrypt: 1  decrypt:-1
 	Des(){
-
-		key = BitArray.getBooleanArray(new byte[] {(byte)0x13,(byte)0x34 ,(byte)0x57 ,(byte)0x79 ,(byte)0x9B, (byte)0xBC, (byte)0xDF, (byte)0xF1});
-    	roundKey = generateRoundKey(key);
+        //construct with default value
+		//key = BitArray.getBitArray(new byte[] {(byte)0x13,(byte)0x34 ,(byte)0x57 ,(byte)0x79 ,(byte)0x9B, (byte)0xBC, (byte)0xDF, (byte)0xF1});
+    	//roundKey = generateRoundKey(key);
     	roundKeyStarter=0;
     	roundKeyOrder=1;
 		message =new byte[]{(byte)1, (byte) 162, (byte) 179, (byte)196,(byte) 213, (byte)230, (byte)7, (byte)248};
@@ -39,39 +33,47 @@ public class Des {
 	}
 	
     public static void main(String[] args) {  
+    	//test board
+        String input = new String("AM,HERE,ABE,STANEY\r\n"
+        		+ "AT,ELRIGES\r\n"
+        		+ "COME,ELSIE\r\n"
+        		+ "NEVER!\r\n"
+        		+ "ELSIE,PRERARE,TO,MEET,THE,GOD");   	
 
         Des d = new Des();   
+        d.setMessage(input);
+        d.setKey("DANCEMEN");
 
-
-        d.setKey("QSQSQSQS");        
-        d.setMessage("hellooolKKKKKKKsaK");
-        d.encrypt();
+        System.out.println(d.encrypt());
         System.out.println(d.decrypt());
         
-        //byte[] cipher = {(byte)132,(byte)63,(byte)222,(byte)230,(byte)159,(byte)100,(byte)27,(byte)7}; deafult answer
+        
+        //{(byte)132,(byte)63,(byte)222,(byte)230,(byte)159,(byte)100,(byte)27,(byte)7}; deafult answer
       
 
-    	         
-        
-
-        
     
     }  
   
     
     
 
-    public void setKey(String input) {
+    public void setKey(String input) {//parse 8 length string to key ,and generate roundKey if input is valid  
     	
-    	if(input.length() != 8){
-   		 System.out.println("please type  valid key(8 word)");	
+    	if(input.length() != 8){  //key length check ,no pariry check 
+   		 System.out.println("please type  valid key(8 word)");
+   		 return;
     	}	
-    	key=BitArray.getBooleanArray(msgEncoder(input));
-    	System.out.println("the key is :");
+							
+ 	
+    	System.out.println("Key in  byte array");   
+    	
+    	key=BitArray.getBitArray(msgEncoder(input));
+										
+    	System.out.println("Key in  64 bit block :");
     	for(byte i : key) {
         	System.out.print(i);    		
     	}
-    	System.out.println(); 
+    	
     	roundKey = generateRoundKey(key);
     	return;
     }  
@@ -79,37 +81,28 @@ public class Des {
     
     
     public void setMessage(String input) {
-    	
+       	System.out.println("the text is :");       	
        	message=msgEncoder(input);
        	cipher=new byte[message.length];
-       	System.out.println("the text is :");         	
-       	for(byte i : key) {
-           	System.out.print(i);    		
-       	}
-       	System.out.println("\n");      	
+      	      	
        	return;   	
     }
+    
     public String encrypt() {
     	return encrypt(message,cipher);
     } 
     public String encrypt(byte[] message,byte[]cipher) {
     	
-    	for(int i = 0 ; i < message.length/8 ; i++) {
-            for(byte j:Arrays.copyOfRange(message, i*8, i*8+8)) {
-             //   System.out.print(j);        	
-            }  
-            System.out.println(); 
-    		message_block = BitArray.getBooleanArray(Arrays.copyOfRange(message, i*8, i*8+8)); 
+    	for(int i = 0 ; i < message.length/8 ; i++) {     //spilt message into 64 bit block
+    		message_block = BitArray.getBitArray(Arrays.copyOfRange(message, i*8, i*8+8)); 
 
    		
-           /* for(byte j:key) {
-                System.out.print(j);        	
-            }   */
+  
+            message_block = permutation(message_block,Table.IP);   //init permutation 
             
-            System.out.println();   
-            message_block = permutation(message_block,Table.IP); 
-            //round  
-            byte[] message_L= new byte[32],message_R = new byte[32],reg = new byte[32];
+            
+            
+            byte[] message_L= new byte[32],message_R = new byte[32],reg = new byte[32];  //round
             
             int starter = roundKeyStarter;
             for(int j = 0 ; j < 16 ; j++) {
@@ -125,28 +118,23 @@ public class Des {
         
                 reg= xor(reg,message_L);
                 
-                msgCombine(message_block,message_R, reg);          	
+                msgCombine(message_block,message_R, reg);          //swap L and R	
             	
             }
-            msgSpilt(message_block,message_L,message_R);     
+            msgSpilt(message_block,message_L,message_R);        // last round  no need to swap
             msgCombine(message_block,message_R, message_L); 
             
             
             
-            message_block = permutation(message_block,Table.FP);      		
+            message_block = permutation(message_block,Table.FP);      // final permutation		(reverse of IP)
     		
-           /* for(byte j:message_block) {
-                System.out.print(j);        	
-            }     		
-            System.out.println();                  */
-            byte[] c = BitArray.byteToBit(message_block);//64bit to 8 byte
-            for(int j= 0;j<8;j++) {
+              
+            byte[] c = BitArray.bitToByte(message_block);//64bit to 8 byte
+            for(int j= 0;j<8;j++) {    //send (8 byte)value to cipher array(input length)
             	cipher[i*8+j] = c[j];
             }
-           /* for(byte j:c) {
-                System.out.println(j & 0xFF);        	
-            } */  
-            System.out.println();  
+
+ 
 
     	}
     	
@@ -155,7 +143,7 @@ public class Des {
     	
     	roundKeyStarter=0;
     	roundKeyOrder=1;  
-	    System.out.println("cipher"); 
+	    System.out.println("result"); 
 	    for(byte j:cipher) {
 	        System.out.print(j & 0xFF);  
 	        System.out.print(" "); 	        
@@ -169,7 +157,7 @@ public class Des {
     	return encrypt(cipher,message);    	
     }    
     
-    static byte[] permutation(byte[] b,int[] table) {
+    private byte[] permutation(byte[] b,int[] table) {
 	
     	byte[] result = new byte[table.length];
     	    	
@@ -182,7 +170,7 @@ public class Des {
      
 
     
-    static void msgSpilt(byte[] msg,byte[] L,byte[] R) {
+    private void msgSpilt(byte[] msg,byte[] L,byte[] R) {
     	int length = msg.length/2;
     	for(int i = 0 ; i < length ; i++) {
     		L[i] = msg[i];
@@ -190,7 +178,7 @@ public class Des {
     	}  	
     	return;
     }    
-    static void msgCombine(byte[] msg,byte[] L,byte[] R) {
+    private void msgCombine(byte[] msg,byte[] L,byte[] R) {
     	int length = msg.length/2;    	
     	for(int i = 0 ; i < length ; i++) {
     		msg[i]=L[i];
@@ -199,7 +187,7 @@ public class Des {
     	return;
     }      
     
-    static byte[] xor(byte[] a,byte[] b) {
+    private byte[] xor(byte[] a,byte[] b) {
 
     	byte[] result = new byte[a.length];
     	for(int i = 0 ; i < a.length ; i++ ) {
@@ -212,7 +200,7 @@ public class Des {
     }    
     
     
-    static byte[] Sbox(byte[] msg) {//48bit to 32bit
+    private byte[] Sbox(byte[] msg) {//48bit to 32bit
     	byte[] result = new byte[32];
     	byte xoooox, oxxo;   //x0000x 0xx0
     	for(int i = 0 ; i < 8 ; i++) {
@@ -233,24 +221,30 @@ public class Des {
     	return result; 
     }
     
-    static byte[][] generateRoundKey(byte[] key) {
+    private byte[][] generateRoundKey(byte[] key) {
     	byte[][]result=new byte[16][48];
-        byte[] key_56 = permutation(key,Table.PC1);    	
+        byte[] key_56 = permutation(key,Table.PC1);    	//64 bit to 58 bit
         
-        for(int i = 0 ; i < 16 ; i++) {
-        	for(int j = 0 ; j < Table.shiftBit[i];j++) {
+        for(int i = 0 ; i < 16 ; i++) {                      //round key *16
+        	for(int j = 0 ; j < Table.shiftBit[i];j++) {     // shift L part and R part with specified value 
                 BitArray.shift(key_56, 0, 27);
                 BitArray.shift(key_56, 28, 55);        		
         	}
 
             
-            result[i] = permutation(key_56,Table.PC2);  //key1         	
+            result[i] = permutation(key_56,Table.PC2);  //get 48 bit round key       	
         }
 
-    	
+    	for(int i = 0 ; i < 16 ; i++) {
+           	System.out.printf("\n%d round\n",i+1);    		
+        	for(int j = 0 ; j < 48 ; j++) {
+               	System.out.printf("%d",result[i][j]);       		
+        	}    
+    	}
+       	System.out.printf("\n");
     	return result;
     }   
-    static byte[] feistel(byte[] msg,byte[] key) {
+    private byte[] feistel(byte[] msg,byte[] key) {
     	
     	byte[] exp = permutation(msg,Table.E); //32 to 48 bit   	
     	exp = xor(key,exp);            
@@ -273,7 +267,11 @@ public class Des {
     	
     	byte[] result;    
     	result = Arrays.copyOf(input.getBytes().clone(),length);
-
+    	
+       	for(byte i : result) {
+           	System.out.printf("%d ",i);    		
+       	}
+       	System.out.printf("\n\n");        	
     	return result;  	
     }	
     

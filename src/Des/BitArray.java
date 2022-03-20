@@ -1,8 +1,9 @@
-package Des;  
-import java.util.Arrays;  
-public class BitArray {  
-
-    public static byte[] getBooleanArray(byte[] b) {  
+package Des;    
+public class BitArray { 
+	//turn 8(n) byte array to 64(n*8) bit array
+	//L shift byte array in custom scope
+	//64(n*8) bit array back
+    public static byte[] getBitArray(byte[] b) {  
         byte[] array = new byte[8*b.length];  
         
         for (int i = 0; i < b.length; i++) {  
@@ -28,7 +29,7 @@ public class BitArray {
     
     
   
-    public static byte[] byteToBit(byte[] b) {  
+    public static byte[] bitToByte(byte[] b) {  
     	byte[] result= new byte[b.length/8];
     	for(int i =0; i < result.length;i++) {		
     			result[i] = (byte)(b[i*8]*128+b[i*8+1]*64+b[i*8+2]*32+b[i*8+3]*16+
