@@ -1,7 +1,8 @@
 package Des;
 
 import java.util.Arrays;
-
+import java.util.Base64;
+import java.util.Scanner;
 
 public class Des {
 
@@ -20,7 +21,7 @@ public class Des {
 
 	
 	
-	
+
 
 	Des(){
         //construct with default value
@@ -31,67 +32,50 @@ public class Des {
 		message =new byte[]{(byte)1, (byte) 162, (byte) 179, (byte)196,(byte) 213, (byte)230, (byte)7, (byte)248};
 
 	}
-	
-    public static void main(String[] args) {  
-    	//test board
-        String input = new String("AM,HERE,ABE,STANEY\r\n"
-        		+ "AT,ELRIGES\r\n"
-        		+ "COME,ELSIE\r\n"
-        		+ "NEVER!\r\n"
-        		+ "ELSIE,PRERARE,TO,MEET,THE,GOD");   	
-
-        Des d = new Des();   
-        d.setMessage(input);
-        d.setKey("DANCEMEN");
-
-        System.out.println(d.encrypt());
-        System.out.println(d.decrypt());
+	      
         
-        
-        //{(byte)132,(byte)63,(byte)222,(byte)230,(byte)159,(byte)100,(byte)27,(byte)7}; deafult answer
-      
+        //{(byte)132,(byte)63,(byte)222,(byte)230,(byte)159,(byte)100,(byte)27,(byte)7}defult answer; 
 
-    
-    }  
-  
     
     
 
-    public void setKey(String input) {//parse 8 length string to key ,and generate roundKey if input is valid  
+    public boolean setKey(String input) {//parse 8 length string to key ,and generate roundKey if input is valid  
     	
     	if(input.length() != 8){  //key length check ,no pariry check 
    		 System.out.println("please type  valid key(8 word)");
-   		 return;
+   		 return false;
     	}	
 							
- 	
-    	System.out.println("Key in  byte array");   
+    	System.out.println("Key :"+input); 	
+    	//System.out.println("Key in  byte array");   
     	
     	key=BitArray.getBitArray(msgEncoder(input));
 										
-    	System.out.println("Key in  64 bit block :");
+    	/*System.out.println("Key in  64 bit block :");
     	for(byte i : key) {
         	System.out.print(i);    		
-    	}
-    	
+    	}*/
+    	System.out.println();  	
     	roundKey = generateRoundKey(key);
-    	return;
+    	return true;
     }  
    
     
     
     public void setMessage(String input) {
-       	System.out.println("the text is :");       	
+       	System.out.println("the text is :\n\n"+input);     
+       	System.out.println("\n"); 
        	message=msgEncoder(input);
        	cipher=new byte[message.length];
       	      	
        	return;   	
     }
-    
-    public String encrypt() {
-    	return encrypt(message,cipher);
+
+    public String encrypt() {   //cipher out(b64)
+    	return Base64.getEncoder().encodeToString(encrypt(message,cipher)) ;
     } 
-    public String encrypt(byte[] message,byte[]cipher) {
+
+    public byte[] encrypt(byte[] message,byte[]cipher) {//byte[] in byte[] out
     	
     	for(int i = 0 ; i < message.length/8 ; i++) {     //spilt message into 64 bit block
     		message_block = BitArray.getBitArray(Arrays.copyOfRange(message, i*8, i*8+8)); 
@@ -143,20 +127,32 @@ public class Des {
     	
     	roundKeyStarter=0;
     	roundKeyOrder=1;  
-	    System.out.println("result"); 
+	   /* System.out.println("result\n"); 
+	    int temp=0;
 	    for(byte j:cipher) {
-	        System.out.print(j & 0xFF);  
-	        System.out.print(" "); 	        
+          	
+           	if(temp==8) {
+               	System.out.println();   
+               	temp=0;
+           	}	    	
+	        System.out.print(j);  
+	        System.out.print(" "); 
+       		temp++; 
 	    }   
-	    System.out.println(); 
-    	return msgDecoder(cipher);
+	    System.out.println(); */
+    	return cipher;
     }
-    public String decrypt() {
+    public String decrypt() {// message out
     	roundKeyStarter=15;
     	roundKeyOrder=-1;
-    	return encrypt(cipher,message);    	
+    	return msgDecoder(encrypt(cipher,message));    	
     }    
-    
+    public String decrypt(String input) {//b64 in  message out
+    	message = Base64.getDecoder().decode(input);
+    	roundKeyStarter=15;   //reverse key
+    	roundKeyOrder=-1;
+    	return msgDecoder(encrypt(message,cipher));    	
+    }   
     private byte[] permutation(byte[] b,int[] table) {
 	
     	byte[] result = new byte[table.length];
@@ -203,17 +199,22 @@ public class Des {
     private byte[] Sbox(byte[] msg) {//48bit to 32bit
     	byte[] result = new byte[32];
     	byte xoooox, oxxo;   //x0000x 0xx0
+    	
+    	
+
     	for(int i = 0 ; i < 8 ; i++) {
     		
     		oxxo = (byte) (msg[i*6]*2+msg[i*6+5]);
     		xoooox =(byte) (msg[i*6+1]*8+msg[i*6+2]*4+msg[i*6+3]*2+msg[i*6+4]);
     		
 			byte temp = Table.Sbox[i][oxxo][xoooox];  
-
+    	
     		for(int j = 3 ; j >=0 ; j--) {
                 result[i*4+j] = (byte)(temp & 1);  
                 temp = (byte) (temp >> 1);  
+   
     		} 
+
     	}
     	
 	
@@ -235,13 +236,13 @@ public class Des {
             result[i] = permutation(key_56,Table.PC2);  //get 48 bit round key       	
         }
 
-    	for(int i = 0 ; i < 16 ; i++) {
+    	/*for(int i = 0 ; i < 16 ; i++) {
            	System.out.printf("\n%d round\n",i+1);    		
         	for(int j = 0 ; j < 48 ; j++) {
                	System.out.printf("%d",result[i][j]);       		
         	}    
     	}
-       	System.out.printf("\n");
+       	System.out.printf("\n");*/
     	return result;
     }   
     private byte[] feistel(byte[] msg,byte[] key) {
@@ -257,7 +258,7 @@ public class Des {
     
     
     
-    
+ 
     
     
     byte[] msgEncoder(String input) { //message string to input data
@@ -268,14 +269,25 @@ public class Des {
     	byte[] result;    
     	result = Arrays.copyOf(input.getBytes().clone(),length);
     	
-       	for(byte i : result) {
-           	System.out.printf("%d ",i);    		
+    	
+    	int temp=0;
+       /*	for(byte i : result) {
+
+           	System.out.printf("%d ",i);  
+       	
+           	if(temp==8) {
+               	System.out.println();   
+               	temp=0;
+           	}
+       		temp++;              	
        	}
-       	System.out.printf("\n\n");        	
+       	System.out.printf("\n\n");*/        	
     	return result;  	
     }	
     
     String msgDecoder(byte[] output) {    // get message string from output data
     	return new String(output, java.nio.charset.StandardCharsets.UTF_8);
     }    
+    
+    
 }
